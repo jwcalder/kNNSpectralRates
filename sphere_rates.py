@@ -36,24 +36,24 @@ for e in range(12,18):
     for T in range(100):
 
         #Random samples on sphere
-        X = gl.rand_ball(n,m+1)
+        X = gl.utils.rand_ball(n,m+1)
         X = X / np.linalg.norm(X,axis=1)[:,np.newaxis]
 
         #knngraph 
-        I,J,D = gl.knnsearch(X,k)
-        W = gl.dist_matrix(I,J,D,k)>0
-        W = gl.sparse_max(W,W.transpose())
-        L = (2*p**(2/m)/sigma)*gl.graph_laplacian(W)*((n*alpha/k)**(1+2/m))/n
+        J,D = gl.weightmatrix.knnsearch(X,k)
+        W = gl.weightmatrix.knn(None,k,knn_data=(J,D),kernel='uniform')
+        L = (2*p**(2/m)/sigma)*gl.graph(W).laplacian()*((n*alpha/k)**(1+2/m))/n
         vals_knn,vecs_knn = eigsh(L,k=num_vals,which='SM')
 
-        #Eps graph
+        #Eps graph, reusing knnsearch from above
         eps = np.min(np.max(D,axis=1))
         mask = D.flatten() <= eps
+        I = np.ones((n,k))*np.arange(n)[:,None]
         I = I.flatten()[mask]
         J = J.flatten()[mask]
         D = D.flatten()[mask] 
         W = coo_matrix((np.ones_like(D),(I,J)),shape=(n,n)).tocsr()
-        L = (2/p/sigma)*gl.graph_laplacian(W)/(n*eps**(m+2))
+        L = (2/p/sigma)*gl.graph(W).laplacian()/(n*eps**(m+2))
         vals_eps,vecs_eps = eigsh(L,k=num_vals,which='SM')
 
         val_err_knn = np.absolute(val_exact - vals_knn)
